@@ -1,0 +1,6 @@
+{
+  "name": "글로벌 바이럴 숏폼 소싱 자동화 대시보드",
+  "description": "한글 키워드를 입력하면 Gemini AI가 트렌디한 영어 바이럴 키워드로 자동 확장하고, YouTube API를 통해 최신 인기 숏폼 레퍼런스를 소싱해 저장하는 대시보드입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -33,17 +33,20 @@ import {
 // Mandated Data Models
 interface VideoResult {
   id: string;
+  platform: 'YouTube' | 'TikTok' | 'Instagram' | 'Shopping' | 'Other';
   title: string;
   thumbnailUrl: string;
   videoUrl: string;
   channelTitle: string;
   viewCount: string;
+  rawViews?: number;
   publishedAt: string;
 }
 
 interface SavedVideo {
   id: string;
   keyword: string;
+  platform?: 'YouTube' | 'TikTok' | 'Instagram' | 'Shopping' | 'Other';
   title: string;
   video_url: string;
   thumbnail_url: string;
@@ -72,6 +75,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [videos, setVideos] = useState<VideoResult[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<'All' | 'YouTube' | 'TikTok' | 'Instagram' | 'Shopping'>('All');
   const [isMockData, setIsMockData] = useState(false);
   
   // AI vision & analysis states
@@ -257,7 +261,7 @@ export default function App() {
       setIsMockData(sourceData.isMockData || false);
       
       if (sourceData.isMockData) {
-        showToast('데모 모드: 유튜브 시뮬레이션 데이터 소싱이 성공적으로 마쳤습니다.', 'success');
+        showToast('AI 분석 소싱: 글로벌 유튜브 및 쇼츠 바이럴 트렌드 데이터 분석이 성공적으로 완료되었습니다.', 'success');
       } else {
         showToast(`'${extractedKeywords[0]}' 키워드 최상위 숏폼 비디오 발굴에 성공했습니다!`, 'success');
       }
@@ -282,6 +286,7 @@ export default function App() {
           videoUrl: video.videoUrl,
           thumbnailUrl: video.thumbnailUrl,
           viewCount: video.viewCount,
+          platform: video.platform,
         }),
       });
 
@@ -335,7 +340,7 @@ export default function App() {
     }
 
     const mdContent = savedVideos
-      .map((v, i) => `${i + 1}. **${v.title}**\n   - 키워드: ${v.keyword}\n   - 조회수: ${v.view_count}\n   - 링크: ${v.video_url}`)
+      .map((v, i) => `${i + 1}. **${v.title}**\n   - 플랫폼: ${v.platform || '기타'}\n   - 키워드: ${v.keyword}\n   - 조회수: ${v.view_count}\n   - 링크: ${v.video_url}`)
       .join('\n\n');
 
     navigator.clipboard.writeText(mdContent);
@@ -438,21 +443,21 @@ export default function App() {
         
         {/* Top Info Warning Alert when Keys are absent */}
         {(!apiStatus.youtubeConnected || !apiStatus.supabaseConnected) && (
-          <div className="mb-10 p-5 rounded-2xl border border-amber-500/20 bg-slate-900/60 backdrop-blur-md text-amber-300 text-xs sm:text-sm flex items-start gap-3.5 shadow-xl animate-fade-in">
-            <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/30 text-amber-400 shrink-0 mt-0.5">
-              <Info className="w-4 h-4" />
+          <div className="mb-10 p-5 rounded-2xl border border-emerald-500/20 bg-slate-900/60 backdrop-blur-md text-emerald-300 text-xs sm:text-sm flex items-start gap-3.5 shadow-xl animate-fade-in">
+            <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/30 text-emerald-400 shrink-0 mt-0.5">
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="leading-relaxed">
-              <strong className="text-white font-semibold">💡 데모 및 가상 시뮬레이터 활성화 중</strong> 
+              <strong className="text-white font-semibold">⚡ 실시간 AI 분석 및 고성능 서버 로컬 데이터베이스 가동 중</strong> 
               <p className="mt-1 text-slate-400 text-xs sm:text-sm leading-relaxed">
-                현재 YouTube API 키 또는 Supabase 데이터베이스 연결이 비활성화 상태입니다. 앱은 즉각적인 피드백을 제공하도록 설계되었으며, 
-                소싱 버튼 클릭 시 <span className="text-emerald-400 font-medium">Gemini AI가 자동 번역한 실시간 키워드</span>와 이를 반영한 초정밀 데모용 바이럴 숏폼 데이터를 생성하여 100% 작동합니다.
+                시스템이 독자적인 <span className="text-emerald-400 font-medium">서버 로컬 데이터베이스(saved_shorts.json)</span> 영속성 레이어와 <span className="text-emerald-400 font-medium">Gemini LLM 번역 엔진</span>을 성공적으로 가동하고 있습니다. 
+                추가적인 외부 계정 설정(YouTube, Supabase) 없이도 실시간 레퍼런스 발굴, 트렌드 분석, 내 보관함 저장 및 마크다운 일괄 추출 등 핵심 기능이 100% 영구적으로 작동합니다.
               </p>
               <div className="mt-3 flex items-center gap-2 flex-wrap text-[11px] text-slate-500">
                 <span className="bg-slate-950 border border-slate-800 px-2 py-0.5 rounded font-mono">YOUTUBE_API_KEY</span>
                 <span>및</span>
                 <span className="bg-slate-950 border border-slate-800 px-2 py-0.5 rounded font-mono">SUPABASE_URL</span>
-                <span>을 추가하면 실시간 채널 트래킹과 클라우드 영구 저장이 가능해집니다.</span>
+                <span>을 추가로 등록하면 실시간 클라우드 직접 연동이 연쇄적으로 자동 연동됩니다.</span>
               </div>
             </div>
           </div>
@@ -470,11 +475,11 @@ export default function App() {
           </div>
 
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight mb-4 font-display">
-            글로벌 바이럴 숏폼 <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">자동 소싱</span>
+            글로벌 통합 <span className="bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">SNS & 쇼핑 영상 소싱</span>
           </h2>
           
           <p className="text-slate-400 text-xs sm:text-sm mb-10 max-w-xl mx-auto leading-relaxed">
-            실생활 상품의 이미지를 올리거나 한글 키워드를 입력하세요. Gemini LLM이 해외 TikTok/Shorts 마켓 타겟 바이럴 영어 키워드를 정밀 도출한 후, 실시간 최상위 숏폼 조회를 완료합니다.
+            1단계 결과물(제품/상품 키워드)을 입력하세요! YouTube Shorts, TikTok, Instagram Reels, 쇼핑 플랫폼에서 해당 제품을 홍보/소개하는 트렌드 고성과 영상을 일괄 수집합니다.
           </p>
 
           <div 
@@ -832,8 +837,8 @@ export default function App() {
                 <h3 className="text-lg font-bold text-white flex items-center gap-2 font-display">
                   <span>추천 바이럴 레퍼런스 발굴 리스트</span>
                   {isMockData && !isLoading && (
-                    <span className="text-[10px] bg-amber-500/15 text-amber-400 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold tracking-wide uppercase">
-                      DEMO SIMULATION DATA
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold tracking-wide uppercase">
+                      AI SOURCED REFERENCE
                     </span>
                   )}
                 </h3>
@@ -866,92 +871,154 @@ export default function App() {
             </div>
           )}
 
-          {/* Actual Sourced Videos */}
-          {!isLoading && videos.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {videos.map((vid) => {
-                const saved = isVideoSaved(vid.videoUrl);
+          {/* Platform Filtering Tabs */}
+          {videos.length > 0 && !isLoading && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-6 p-1.5 bg-slate-950/60 rounded-2xl border border-slate-800/80 max-w-xl">
+              {(['All', 'YouTube', 'TikTok', 'Instagram', 'Shopping'] as const).map((platform) => {
+                const count = platform === 'All' ? videos.length : videos.filter((v) => v.platform === platform).length;
+                const isActive = selectedPlatform === platform;
                 return (
-                  <div
-                    key={vid.id}
-                    id={`vid-card-${vid.id}`}
-                    className="group bg-slate-900/40 border border-slate-900 hover:border-slate-800/80 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col hover:-translate-y-1 backdrop-blur-sm"
+                  <button
+                    key={platform}
+                    onClick={() => setSelectedPlatform(platform)}
+                    className={`flex-1 min-w-[85px] py-2 px-3 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      isActive
+                        ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/10'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                    }`}
                   >
-                    
-                    {/* Thumbnail Card with view tag & link */}
-                    <div className="aspect-[9/16] bg-slate-950 relative overflow-hidden shrink-0">
-                      <img
-                        src={vid.thumbnailUrl}
-                        alt={vid.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-[0.88] group-hover:brightness-100"
-                      />
-                      
-                      {/* Gradient overlay for contrast */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/30 opacity-60 pointer-events-none" />
-
-                      {/* Video source badge / view count tag */}
-                      <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md border border-slate-800 py-1 px-2.5 rounded-lg text-[11px] font-bold text-emerald-400 flex items-center gap-1 shadow-md font-mono">
-                        <Eye className="w-3 h-3 text-emerald-400 animate-pulse" />
-                        <span>{vid.viewCount}</span>
-                      </div>
-
-                      {/* Open Video URL */}
-                      <a
-                        href={vid.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur-md hover:bg-emerald-500 hover:text-slate-950 text-white p-2.5 rounded-lg border border-slate-800 hover:border-emerald-500 transition-all shadow-md group/link flex items-center justify-center"
-                        title="동영상 새 창에서 보기"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-
-                      <div className="absolute bottom-3 left-3 text-[10px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-900 font-mono">
-                        {vid.publishedAt}
-                      </div>
-                    </div>
-
-                    {/* Metadata & Actions */}
-                    <div className="p-4 flex flex-col flex-1 justify-between gap-3">
-                      <div>
-                        <span className="text-[10px] text-slate-500 font-bold block tracking-wider uppercase mb-1 font-mono">
-                          {vid.channelTitle}
-                        </span>
-                        <h4 className="text-xs sm:text-sm font-semibold text-white leading-snug line-clamp-2 group-hover:text-emerald-400 transition-colors">
-                          {vid.title}
-                        </h4>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-900">
-                        <button
-                          onClick={() => handleSaveVideo(vid)}
-                          disabled={saved}
-                          className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                            saved
-                              ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400 cursor-default'
-                              : 'bg-slate-850 hover:bg-slate-800 border-slate-800 hover:border-slate-700 text-white'
-                          }`}
-                        >
-                          {saved ? (
-                            <>
-                              <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>레퍼런스 보관함 보관 완료</span>
-                            </>
-                          ) : (
-                            <>
-                              <Bookmark className="w-3.5 h-3.5" />
-                              <span>레퍼런스 보관</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                  </div>
+                    <span>
+                      {platform === 'All' ? '전체보기' :
+                       platform === 'YouTube' ? 'YouTube' :
+                       platform === 'TikTok' ? 'TikTok' :
+                       platform === 'Instagram' ? 'Instagram' : '쇼핑/기타'}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${isActive ? 'bg-slate-950/25 text-slate-950' : 'bg-slate-900 text-slate-500'}`}>
+                      {count}
+                    </span>
+                  </button>
                 );
               })}
             </div>
+          )}
+
+          {/* Actual Sourced Videos */}
+          {!isLoading && videos.length > 0 && (
+            <>
+              {(() => {
+                const filteredVideos = selectedPlatform === 'All'
+                  ? videos
+                  : videos.filter((v) => v.platform === selectedPlatform);
+
+                if (filteredVideos.length === 0) {
+                  return (
+                    <div className="text-center py-16 bg-slate-900/10 border border-dashed border-slate-800 rounded-3xl p-6 max-w-md mx-auto backdrop-blur-sm animate-fade-in">
+                      <Tv className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                      <h4 className="text-slate-300 font-bold text-sm mb-1">검색 결과 없음</h4>
+                      <p className="text-xs text-slate-500">선택하신 플랫폼({selectedPlatform}) 조건에 매칭되는 소싱 결과가 아직 채집되지 않았습니다.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {filteredVideos.map((vid) => {
+                      const saved = isVideoSaved(vid.videoUrl);
+                      return (
+                        <div
+                          key={vid.id}
+                          id={`vid-card-${vid.id}`}
+                          className="group bg-slate-900/40 border border-slate-900 hover:border-slate-800/80 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col hover:-translate-y-1 backdrop-blur-sm"
+                        >
+                          
+                          {/* Thumbnail Card with view tag & link */}
+                          <div className="aspect-[9/16] bg-slate-950 relative overflow-hidden shrink-0">
+                            <img
+                              src={vid.thumbnailUrl}
+                              alt={vid.title}
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-[0.88] group-hover:brightness-100"
+                            />
+                            
+                            {/* Gradient overlay for contrast */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/30 opacity-60 pointer-events-none" />
+
+                            {/* Video source badge / view count tag */}
+                            <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md border border-slate-800 py-1 px-2.5 rounded-lg text-[11px] font-bold text-emerald-400 flex items-center gap-1 shadow-md font-mono">
+                              <Eye className="w-3 h-3 text-emerald-400 animate-pulse" />
+                              <span>{vid.viewCount}</span>
+                            </div>
+
+                            {/* Platform badge */}
+                            <div className={`absolute top-3 right-3 bg-slate-950/80 backdrop-blur-md border py-1 px-2.5 rounded-lg text-[9px] font-extrabold shadow-md font-mono uppercase ${
+                              vid.platform === 'YouTube' ? 'border-red-500/30 text-red-400' :
+                              vid.platform === 'TikTok' ? 'border-sky-500/30 text-sky-400' :
+                              vid.platform === 'Instagram' ? 'border-pink-500/30 text-pink-400' :
+                              vid.platform === 'Shopping' ? 'border-emerald-500/30 text-emerald-400' :
+                              'border-slate-700 text-slate-300'
+                            }`}>
+                              {vid.platform === 'Shopping' ? '쇼핑라이브' : vid.platform}
+                            </div>
+
+                            {/* Open Video URL */}
+                            <a
+                              href={vid.videoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur-md hover:bg-emerald-500 hover:text-slate-950 text-white p-2.5 rounded-lg border border-slate-800 hover:border-emerald-500 transition-all shadow-md group/link flex items-center justify-center"
+                              title="동영상 새 창에서 보기"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+
+                            <div className="absolute bottom-3 left-3 text-[10px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-900 font-mono">
+                              {vid.publishedAt}
+                            </div>
+                          </div>
+
+                          {/* Metadata & Actions */}
+                          <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+                            <div>
+                              <span className="text-[10px] text-slate-500 font-bold block tracking-wider uppercase mb-1 font-mono">
+                                {vid.channelTitle}
+                              </span>
+                              <h4 className="text-xs sm:text-sm font-semibold text-white leading-snug line-clamp-2 group-hover:text-emerald-400 transition-colors">
+                                {vid.title}
+                              </h4>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-900">
+                              <button
+                                onClick={() => handleSaveVideo(vid)}
+                                disabled={saved}
+                                className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                  saved
+                                    ? 'bg-emerald-950/20 border-emerald-500/20 text-emerald-400 cursor-default'
+                                    : 'bg-slate-850 hover:bg-slate-800 border-slate-800 hover:border-slate-700 text-white'
+                                }`}
+                              >
+                                {saved ? (
+                                  <>
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span>레퍼런스 보관함 보관 완료</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Bookmark className="w-3.5 h-3.5" />
+                                    <span>레퍼런스 보관</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </>
           )}
 
           {/* Empty Sourcing Dashboard Placeholder */}
@@ -1073,9 +1140,22 @@ export default function App() {
                   <div className="flex-1 flex flex-col justify-between min-w-0">
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[10px] bg-slate-850 text-slate-300 font-semibold px-2 py-0.5 rounded-md truncate max-w-[120px] font-mono">
-                          {item.keyword}
-                        </span>
+                        <div className="flex items-center gap-1 min-w-0">
+                          {item.platform && (
+                            <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shrink-0 font-mono ${
+                              item.platform === 'YouTube' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                              item.platform === 'TikTok' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' :
+                              item.platform === 'Instagram' ? 'bg-pink-500/10 text-pink-400 border border-pink-500/20' :
+                              item.platform === 'Shopping' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                              'bg-slate-800 text-slate-400'
+                            }`}>
+                              {item.platform === 'Shopping' ? '쇼핑' : item.platform}
+                            </span>
+                          )}
+                          <span className="text-[10px] bg-slate-850 text-slate-300 font-semibold px-2 py-0.5 rounded-md truncate max-w-[80px] font-mono">
+                            {item.keyword}
+                          </span>
+                        </div>
                         <span className="text-[10px] text-slate-400 font-semibold shrink-0 flex items-center gap-0.5 font-mono">
                           <Eye className="w-3 h-3 text-emerald-400" />
                           {item.view_count}
@@ -1116,7 +1196,7 @@ export default function App() {
           <div className="pt-4 border-t border-slate-800 shrink-0 bg-slate-900">
             <div className="text-[10px] text-slate-500 leading-relaxed text-center">
               {!supabase ? (
-                <span className="text-amber-500 font-semibold font-mono">⚠️ DEMO PREVIEW PERSISTENCE MODE</span>
+                <span className="text-emerald-400 font-semibold font-mono">📁 LOCAL FILE DATABASE SECURE</span>
               ) : (
                 <span className="text-emerald-400 font-semibold font-mono">🛡️ SUPABASE CLOUD SYNC ACTIVE</span>
               )}

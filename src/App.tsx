@@ -107,8 +107,42 @@ export default function App() {
     }
     const reader = new FileReader();
     reader.onload = (e) => {
-      setUploadedImage(e.target?.result as string);
-      showToast('이미지가 업로드되었습니다. 분석할 준비 완료!', 'success');
+      const img = new Image();
+      img.onload = () => {
+        // Create canvas for image resizing and compression
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          // Compress quality to 0.7 JPEG to keep it under ~150KB
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          setUploadedImage(dataUrl);
+          showToast('이미지가 모바일 규격으로 최적화 및 압축 업로드되었습니다.', 'success');
+        } else {
+          setUploadedImage(e.target?.result as string);
+          showToast('이미지가 업로드되었습니다.', 'success');
+        }
+      };
+      img.src = e.target?.result as string;
     };
     reader.readAsDataURL(file);
   };
@@ -209,8 +243,22 @@ export default function App() {
       });
 
       if (!analyzeRes.ok) {
-        const errData = await analyzeRes.json();
-        throw new Error(errData.error || 'AI 분석 진행 중 오류가 발생했습니다.');
+        let errMsg = 'AI 분석 진행 중 오류가 발생했습니다.';
+        try {
+          const contentType = analyzeRes.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errData = await analyzeRes.json();
+            errMsg = errData.error || errMsg;
+          } else {
+            errMsg = `서버 통신 실패 (Status: ${analyzeRes.status}). 잠시 후 다시 시도해 주세요.`;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const analyzeContentType = analyzeRes.headers.get('content-type');
+      if (!analyzeContentType || !analyzeContentType.includes('application/json')) {
+        throw new Error('서버가 JSON이 아닌 응답(HTML)을 반환했습니다. 게이트웨이 또는 서버 점검 중일 수 있습니다.');
       }
 
       const analyzeData = await analyzeRes.json();
@@ -229,11 +277,14 @@ export default function App() {
           body: JSON.stringify({ searchQuery: extractedItemName })
         });
         if (trendRes.ok) {
-          const trendDataJson = await trendRes.json();
-          setTrendData(trendDataJson.trendData || []);
-          setTrendChange(trendDataJson.trendChange || 0);
-          setTrendStatus(trendDataJson.trendStatus || '안정');
-          setViralityScore(trendDataJson.viralityScore || 75);
+          const trendContentType = trendRes.headers.get('content-type');
+          if (trendContentType && trendContentType.includes('application/json')) {
+            const trendDataJson = await trendRes.json();
+            setTrendData(trendDataJson.trendData || []);
+            setTrendChange(trendDataJson.trendChange || 0);
+            setTrendStatus(trendDataJson.trendStatus || '안정');
+            setViralityScore(trendDataJson.viralityScore || 75);
+          }
         }
       } catch (trendErr) {
         console.error('Failed to load trend analysis data:', trendErr);
@@ -252,8 +303,22 @@ export default function App() {
       });
 
       if (!sourceRes.ok) {
-        const errData = await sourceRes.json();
-        throw new Error(errData.error || '유튜브 동영상 소싱 중 오류가 발생했습니다.');
+        let errMsg = '유튜브 동영상 소싱 중 오류가 발생했습니다.';
+        try {
+          const contentType = sourceRes.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errData = await sourceRes.json();
+            errMsg = errData.error || errMsg;
+          } else {
+            errMsg = `동영상 소싱 실패 (Status: ${sourceRes.status})`;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const sourceContentType = sourceRes.headers.get('content-type');
+      if (!sourceContentType || !sourceContentType.includes('application/json')) {
+        throw new Error('동영상 소싱 결과가 올바르지 않은 응답 형식(HTML)으로 수신되었습니다.');
       }
 
       const sourceData = await sourceRes.json();

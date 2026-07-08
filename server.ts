@@ -54,6 +54,15 @@ function writeSavedShorts(data: any[]) {
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+    ),
+  ]);
+}
+
 async function startServer() {
   const app = express();
   app.use(express.json({ limit: '50mb' }));
@@ -119,27 +128,30 @@ async function startServer() {
           for (const modelName of candidateModels) {
             try {
               console.log(`Attempting generateContent with model: ${modelName}`);
-              response = await ai.models.generateContent({
-                model: modelName,
-                contents: { parts },
-                config: {
-                  systemInstruction: systemPrompt,
-                  responseMimeType: 'application/json',
-                  responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                      itemName: { type: Type.STRING },
-                      primaryKeyword: { type: Type.STRING },
-                      keywords: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING }
+              response = await withTimeout(
+                ai.models.generateContent({
+                  model: modelName,
+                  contents: { parts },
+                  config: {
+                    systemInstruction: systemPrompt,
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                      type: Type.OBJECT,
+                      properties: {
+                        itemName: { type: Type.STRING },
+                        primaryKeyword: { type: Type.STRING },
+                        keywords: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING }
+                        },
+                        description: { type: Type.STRING }
                       },
-                      description: { type: Type.STRING }
-                    },
-                    required: ['itemName', 'primaryKeyword', 'keywords', 'description']
+                      required: ['itemName', 'primaryKeyword', 'keywords', 'description']
+                    }
                   }
-                }
-              });
+                }),
+                5000
+              );
 
               if (response && response.text) {
                 console.log(`Successfully generated content using model: ${modelName}`);
@@ -235,38 +247,41 @@ async function startServer() {
 
           for (const modelName of candidateModels) {
             try {
-              response = await ai.models.generateContent({
-                model: modelName,
-                contents: `Analyze trends for Korean keyword: "${searchQuery}"`,
-                config: {
-                  systemInstruction: systemPrompt,
-                  responseMimeType: 'application/json',
-                  responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                      trendData: {
-                        type: Type.ARRAY,
-                        items: {
-                          type: Type.OBJECT,
-                          properties: {
-                            date: { type: Type.STRING },
-                            value: { type: Type.NUMBER }
-                          },
-                          required: ['date', 'value']
-                        }
+              response = await withTimeout(
+                ai.models.generateContent({
+                  model: modelName,
+                  contents: `Analyze trends for Korean keyword: "${searchQuery}"`,
+                  config: {
+                    systemInstruction: systemPrompt,
+                    responseMimeType: 'application/json',
+                    responseSchema: {
+                      type: Type.OBJECT,
+                      properties: {
+                        trendData: {
+                          type: Type.ARRAY,
+                          items: {
+                            type: Type.OBJECT,
+                            properties: {
+                              date: { type: Type.STRING },
+                              value: { type: Type.NUMBER }
+                            },
+                            required: ['date', 'value']
+                          }
+                        },
+                        translatedKeywords: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING }
+                        },
+                        viralityScore: { type: Type.NUMBER },
+                        trendChange: { type: Type.NUMBER },
+                        trendStatus: { type: Type.STRING }
                       },
-                      translatedKeywords: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING }
-                      },
-                      viralityScore: { type: Type.NUMBER },
-                      trendChange: { type: Type.NUMBER },
-                      trendStatus: { type: Type.STRING }
-                    },
-                    required: ['trendData', 'translatedKeywords', 'viralityScore', 'trendChange', 'trendStatus']
+                      required: ['trendData', 'translatedKeywords', 'viralityScore', 'trendChange', 'trendStatus']
+                    }
                   }
-                }
-              });
+                }),
+                5000
+              );
 
               if (response && response.text) {
                 break;
@@ -361,24 +376,27 @@ async function startServer() {
             for (const modelName of candidateModels) {
               try {
                 console.log(`Attempting translation with model: ${modelName}`);
-                response = await ai.models.generateContent({
-                  model: modelName,
-                  contents: prompt,
-                  config: {
-                    responseMimeType: 'application/json',
-                    responseSchema: {
-                      type: Type.OBJECT,
-                      properties: {
-                        keywords: {
-                          type: Type.ARRAY,
-                          items: { type: Type.STRING },
-                          description: '3 english viral shortform keywords'
-                        }
-                      },
-                      required: ['keywords']
+                response = await withTimeout(
+                  ai.models.generateContent({
+                    model: modelName,
+                    contents: prompt,
+                    config: {
+                      responseMimeType: 'application/json',
+                      responseSchema: {
+                        type: Type.OBJECT,
+                        properties: {
+                          keywords: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING },
+                            description: '3 english viral shortform keywords'
+                          }
+                        },
+                        required: ['keywords']
+                      }
                     }
-                  }
-                });
+                  }),
+                  5000
+                );
 
                 if (response && response.text) {
                   console.log(`Successfully translated using model: ${modelName}`);
@@ -702,7 +720,7 @@ async function startServer() {
   // Database Save Reference Endpoint
   app.post('/api/save', async (req, res) => {
     try {
-      const { keyword, title, videoUrl, thumbnailUrl, viewCount } = req.body;
+      const { keyword, title, videoUrl, thumbnailUrl, viewCount, platform } = req.body;
 
       if (!title || !videoUrl) {
         return res.status(400).json({ error: '필수 저장 데이터(제목, 비디오 URL)가 누락되었습니다.' });
@@ -710,6 +728,7 @@ async function startServer() {
 
       const saveData = {
         keyword: keyword || '기타',
+        platform: platform || 'Other',
         title,
         video_url: videoUrl,
         thumbnail_url: thumbnailUrl || '',
@@ -717,19 +736,29 @@ async function startServer() {
         created_at: new Date().toISOString(),
       };
 
-      if (supabase) {
-        // Real Supabase Insert
-        const { data, error } = await supabase
-          .from('saved_shorts')
-          .insert([saveData])
-          .select();
+      let useFallback = !supabase;
+      let data = null;
 
-        if (error) {
-          console.error('Supabase save error:', error);
-          return res.status(500).json({ error: `Supabase 저장 실패: ${error.message}` });
+      if (supabase) {
+        try {
+          const { data: insertData, error } = await supabase
+            .from('saved_shorts')
+            .insert([saveData])
+            .select();
+
+          if (error) {
+            console.warn('Supabase save failed, falling back to local file DB:', error.message);
+            useFallback = true;
+          } else {
+            data = insertData;
+          }
+        } catch (supabaseErr: any) {
+          console.warn('Supabase save exception, falling back to local file DB:', supabaseErr.message || supabaseErr);
+          useFallback = true;
         }
-        return res.status(200).json({ success: true, message: 'Supabase DB에 성공적으로 저장되었습니다!', data });
-      } else {
+      }
+
+      if (useFallback) {
         // Fallback Persistent Local Database Insert
         const mockSavedItem = {
           id: `local_${Date.now()}`,
@@ -745,6 +774,8 @@ async function startServer() {
           isDemo: false
         });
       }
+
+      return res.status(200).json({ success: true, message: 'Supabase DB에 성공적으로 저장되었습니다!', data });
     } catch (err: any) {
       console.error('Save Endpoint Error:', err);
       res.status(500).json({ error: '데이터 저장 처리 중 오류가 발생했습니다.' });
@@ -754,20 +785,34 @@ async function startServer() {
   // Get Saved References Endpoint
   app.get('/api/saved', async (req, res) => {
     try {
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('saved_shorts')
-          .select('*')
-          .order('created_at', { ascending: false });
+      let useFallback = !supabase;
+      let data = null;
 
-        if (error) {
-          throw error;
+      if (supabase) {
+        try {
+          const { data: selectData, error } = await supabase
+            .from('saved_shorts')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) {
+            console.warn('Supabase get failed, falling back to local file DB:', error.message);
+            useFallback = true;
+          } else {
+            data = selectData;
+          }
+        } catch (supabaseErr: any) {
+          console.warn('Supabase get exception, falling back to local file DB:', supabaseErr.message || supabaseErr);
+          useFallback = true;
         }
-        return res.json({ success: true, data });
-      } else {
+      }
+
+      if (useFallback) {
         const currentData = readSavedShorts();
         return res.json({ success: true, data: [...currentData].reverse(), isDemo: false });
       }
+
+      return res.json({ success: true, data });
     } catch (err: any) {
       console.error('Get Saved Error:', err);
       res.status(500).json({ error: '저장된 동영상 목록을 가져오는 데 실패했습니다.' });
@@ -778,17 +823,28 @@ async function startServer() {
   app.delete('/api/saved/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      if (supabase) {
-        const { error } = await supabase
-          .from('saved_shorts')
-          .delete()
-          .eq('id', id);
+      let useFallback = !supabase;
 
-        if (error) {
-          throw error;
+      if (supabase && id && !id.startsWith('local_')) {
+        try {
+          const { error } = await supabase
+            .from('saved_shorts')
+            .delete()
+            .eq('id', id);
+
+          if (error) {
+            console.warn('Supabase delete failed, falling back to local file DB:', error.message);
+            useFallback = true;
+          }
+        } catch (supabaseErr: any) {
+          console.warn('Supabase delete exception, falling back to local file DB:', supabaseErr.message || supabaseErr);
+          useFallback = true;
         }
-        return res.json({ success: true, message: 'Supabase DB에서 삭제되었습니다.' });
       } else {
+        useFallback = true;
+      }
+
+      if (useFallback) {
         let currentData = readSavedShorts();
         const initialLength = currentData.length;
         currentData = currentData.filter(item => item.id !== id);
@@ -797,6 +853,8 @@ async function startServer() {
         }
         return res.json({ success: true, message: '로컬 서버 데이터베이스에서 안전하게 삭제되었습니다.' });
       }
+
+      return res.json({ success: true, message: 'Supabase DB에서 삭제되었습니다.' });
     } catch (err: any) {
       console.error('Delete Saved Error:', err);
       res.status(500).json({ error: '삭제 처리에 실패했습니다.' });

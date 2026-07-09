@@ -100,6 +100,8 @@ export default function App() {
     supabaseConnected: false,
   });
 
+  const [supabaseWarningDismissed, setSupabaseWarningDismissed] = useState(false);
+
   // Image Upload Handlers
   const handleImageUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -532,12 +534,12 @@ export default function App() {
         )}
 
         {/* Supabase Connected but Table is Missing Warning */}
-        {apiStatus.supabaseConnected && apiStatus.supabaseTableExists === false && (
-          <div className="mb-10 p-5 rounded-2xl border border-rose-500/25 bg-rose-950/15 backdrop-blur-md text-rose-300 text-xs sm:text-sm flex items-start gap-3.5 shadow-xl animate-fade-in">
+        {apiStatus.supabaseConnected && apiStatus.supabaseTableExists === false && !supabaseWarningDismissed && (
+          <div className="mb-10 p-5 rounded-2xl border border-rose-500/25 bg-rose-950/15 backdrop-blur-md text-rose-300 text-xs sm:text-sm flex items-start gap-3.5 shadow-xl animate-fade-in relative">
             <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/30 text-rose-400 shrink-0 mt-0.5">
               <AlertTriangle className="w-4 h-4 text-rose-400" />
             </div>
-            <div className="leading-relaxed flex-1">
+            <div className="leading-relaxed flex-1 pr-8">
               <strong className="text-white font-semibold">⚠️ Supabase 테이블 연동 필요 (saved_shorts 테이블 누락)</strong> 
               <p className="mt-1 text-slate-400 text-xs sm:text-sm leading-relaxed">
                 Supabase에 연결되었으나, 보관한 레퍼런스를 클라우드에 영구 동기화하기 위한 <code className="bg-slate-950 border border-slate-800 px-1 py-0.5 rounded text-rose-300 font-mono text-xs">saved_shorts</code> 테이블이 존재하지 않습니다.
@@ -547,6 +549,13 @@ export default function App() {
                 실시간 클라우드 연동을 원하시면, 프로젝트 루트의 <code className="bg-slate-950 border border-slate-800 px-1 py-0.5 rounded text-emerald-400 font-mono text-xs">supabase_schema.sql</code> 파일을 열어 SQL 스크립트를 복사한 후, Supabase 대시보드의 <strong className="text-white">SQL Editor</strong>에서 실행(Run)해 주세요!
               </p>
             </div>
+            <button
+              onClick={() => setSupabaseWarningDismissed(true)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 transition-colors p-1.5 hover:bg-slate-900 rounded-lg cursor-pointer"
+              title="알림 닫기"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 

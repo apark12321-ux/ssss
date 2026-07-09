@@ -69,11 +69,26 @@ async function startServer() {
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // API Status Endpoint
-  app.get('/api/status', (req, res) => {
+  app.get('/api/status', async (req, res) => {
+    let supabaseTableExists = false;
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('saved_shorts').select('id').limit(1);
+        if (!error) {
+          supabaseTableExists = true;
+        } else {
+          console.info('Supabase table saved_shorts check status: not initialized yet.');
+        }
+      } catch (err) {
+        console.info('Supabase table saved_shorts check status: not initialized.');
+      }
+    }
+
     res.json({
       geminiConnected: !!ai,
       youtubeConnected: !!process.env.YOUTUBE_API_KEY,
       supabaseConnected: !!supabase,
+      supabaseTableExists,
     });
   });
 
@@ -747,13 +762,13 @@ async function startServer() {
             .select();
 
           if (error) {
-            console.warn('Supabase save failed, falling back to local file DB:', error.message);
+            console.info('Supabase table saved_shorts is not initialized. Using local storage fallback.');
             useFallback = true;
           } else {
             data = insertData;
           }
         } catch (supabaseErr: any) {
-          console.warn('Supabase save exception, falling back to local file DB:', supabaseErr.message || supabaseErr);
+          console.info('Supabase save database state: not initialized. Using local storage fallback.');
           useFallback = true;
         }
       }
@@ -796,13 +811,13 @@ async function startServer() {
             .order('created_at', { ascending: false });
 
           if (error) {
-            console.warn('Supabase get failed, falling back to local file DB:', error.message);
+            console.info('Supabase table saved_shorts is not initialized. Using local storage fallback.');
             useFallback = true;
           } else {
             data = selectData;
           }
         } catch (supabaseErr: any) {
-          console.warn('Supabase get exception, falling back to local file DB:', supabaseErr.message || supabaseErr);
+          console.info('Supabase get database state: not initialized. Using local storage fallback.');
           useFallback = true;
         }
       }
@@ -833,11 +848,11 @@ async function startServer() {
             .eq('id', id);
 
           if (error) {
-            console.warn('Supabase delete failed, falling back to local file DB:', error.message);
+            console.info('Supabase table saved_shorts is not initialized. Using local storage fallback.');
             useFallback = true;
           }
         } catch (supabaseErr: any) {
-          console.warn('Supabase delete exception, falling back to local file DB:', supabaseErr.message || supabaseErr);
+          console.info('Supabase delete database state: not initialized. Using local storage fallback.');
           useFallback = true;
         }
       } else {

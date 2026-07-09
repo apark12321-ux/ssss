@@ -58,6 +58,7 @@ interface ApiStatus {
   geminiConnected: boolean;
   youtubeConnected: boolean;
   supabaseConnected: boolean;
+  supabaseTableExists?: boolean;
 }
 
 interface Toast {
@@ -476,9 +477,11 @@ export default function App() {
                 <span className={`w-1.5 h-1.5 rounded-full ${apiStatus.youtubeConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
                 <span className={`font-mono ${apiStatus.youtubeConnected ? 'text-slate-300' : 'text-slate-500'}`}>YouTube API</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${apiStatus.supabaseConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-                <span className={`font-mono ${apiStatus.supabaseConnected ? 'text-slate-300' : 'text-slate-500'}`}>Supabase</span>
+              <div className="flex items-center gap-1.5" title={apiStatus.supabaseConnected && apiStatus.supabaseTableExists === false ? "saved_shorts 테이블이 존재하지 않습니다." : undefined}>
+                <span className={`w-1.5 h-1.5 rounded-full ${apiStatus.supabaseConnected ? (apiStatus.supabaseTableExists !== false ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400') : 'bg-amber-400'}`} />
+                <span className={`font-mono ${apiStatus.supabaseConnected ? (apiStatus.supabaseTableExists !== false ? 'text-slate-300' : 'text-rose-400') : 'text-slate-500'}`}>
+                  Supabase {apiStatus.supabaseConnected && apiStatus.supabaseTableExists === false && '(Table Missing)'}
+                </span>
               </div>
             </div>
 
@@ -524,6 +527,25 @@ export default function App() {
                 <span className="bg-slate-950 border border-slate-800 px-2 py-0.5 rounded font-mono">SUPABASE_URL</span>
                 <span>을 추가로 등록하면 실시간 클라우드 직접 연동이 연쇄적으로 자동 연동됩니다.</span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Supabase Connected but Table is Missing Warning */}
+        {apiStatus.supabaseConnected && apiStatus.supabaseTableExists === false && (
+          <div className="mb-10 p-5 rounded-2xl border border-rose-500/25 bg-rose-950/15 backdrop-blur-md text-rose-300 text-xs sm:text-sm flex items-start gap-3.5 shadow-xl animate-fade-in">
+            <div className="p-2 bg-rose-500/10 rounded-xl border border-rose-500/30 text-rose-400 shrink-0 mt-0.5">
+              <AlertTriangle className="w-4 h-4 text-rose-400" />
+            </div>
+            <div className="leading-relaxed flex-1">
+              <strong className="text-white font-semibold">⚠️ Supabase 테이블 연동 필요 (saved_shorts 테이블 누락)</strong> 
+              <p className="mt-1 text-slate-400 text-xs sm:text-sm leading-relaxed">
+                Supabase에 연결되었으나, 보관한 레퍼런스를 클라우드에 영구 동기화하기 위한 <code className="bg-slate-950 border border-slate-800 px-1 py-0.5 rounded text-rose-300 font-mono text-xs">saved_shorts</code> 테이블이 존재하지 않습니다.
+                서버가 자동으로 안전하게 <span className="text-emerald-400 font-medium">로컬 서버 데이터베이스</span>로 우회 가동하여 보관함 기능은 완전히 유지됩니다.
+              </p>
+              <p className="mt-2 text-slate-400 text-xs sm:text-sm">
+                실시간 클라우드 연동을 원하시면, 프로젝트 루트의 <code className="bg-slate-950 border border-slate-800 px-1 py-0.5 rounded text-emerald-400 font-mono text-xs">supabase_schema.sql</code> 파일을 열어 SQL 스크립트를 복사한 후, Supabase 대시보드의 <strong className="text-white">SQL Editor</strong>에서 실행(Run)해 주세요!
+              </p>
             </div>
           </div>
         )}
